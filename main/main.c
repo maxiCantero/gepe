@@ -6,7 +6,6 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 
-static const char *tag = "UART";
 #define entrada0 12
 #define entrada1 14
 #define entrada2 27
@@ -17,8 +16,10 @@ static const char *tag = "UART";
 #define UART_NUM UART_NUM_2
 #define BUF_SIZE 1024
 #define TASK_MEMORY 1024 * 3
+#define NUM_INPUTS 5
 
-static QueueHandle_t uart_queue;
+static const char *tag = "UART";
+static uint8_t ultimo_valor[BUF_SIZE];
 
 static void uart_task(void *pvParameters)
 {
@@ -26,17 +27,18 @@ static void uart_task(void *pvParameters)
     while (1)
     {
         bzero(data, BUF_SIZE);
-
         int len = uart_read_bytes(UART_NUM, data, BUF_SIZE, pdMS_TO_TICKS(100));
         if (len == 0)
         {
             continue;
         }
+        if (len > 0)
+        {
+            memcpy(ultimo_valor, data, len);
+        }
 
-        xQueueSend(uart_queue, data, portMAX_DELAY);
-
+        printf("Dato: %s", data);
         uart_write_bytes(UART_NUM, (const char *)data, len);
-
         ESP_LOGI(tag, "Data received: %s", data);
     }
 }
@@ -81,65 +83,45 @@ static void init_led()
     gpio_reset_pin(entrada5);
     gpio_set_direction(entrada5, GPIO_MODE_OUTPUT);
     gpio_set_level(entrada5, 1);
-    // gpio_reset_pin(ignicion);
-    // gpio_set_direction(ignicion, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(ignicion);
+    gpio_set_direction(ignicion, GPIO_MODE_INPUT);
 
     ESP_LOGI(tag, "Init Led completed");
-}
-
-uint8_t *read_uart_data()
-{
-    uint8_t *received_data = (uint8_t *)malloc(BUF_SIZE);
-    if (xQueueReceive(uart_queue, received_data, portMAX_DELAY) == pdTRUE)
-    {
-        return received_data;
-    }
-    else
-    {
-        return NULL;
-    }
 }
 
 void enviar_mensaje(const char *mensaje)
 {
     uart_write_bytes(UART_NUM, mensaje, strlen(mensaje));
 }
-
-void test_entradas(void)
+void test_entrada()
 {
-    ESP_LOGI(tag, "test IN00");
     gpio_set_level(entrada0, 0);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    
+    if (strcmp((char*)ultimo_valor, "IN0 OK") == 0)
+    {
+        ESP_LOGI(tag,"Valor correcto");
+        gpio_set_level(entrada0,1);
+    }
 }
 
 void app_main(void)
 {
+    // vTaskDelay(1000 / portTICK_PERIOD_MS);
     init_led();
     init_uart();
-    test_entradas();
-    uart_queue = xQueueCreate(10, BUF_SIZE*2);
+    ESP_LOGW(tag, "Iniciando....");
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    ESP_LOGI(tag, "Iniciado!!!");
 
     for (;;)
     {
-        gpio_set_level(entrada1, 0);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        gpio_set_level(entrada1, 1);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-        uint8_t *data = read_uart_data();
-
-        if (data != NULL)
+        int estado_boton = gpio_get_level(ignicion);
+        ESP_LOGI(tag, "Estado de boton: %d\n", estado_boton);
+        if (estado_boton == 0)
         {
-            int data_length = strlen((char*)data);
-
-            for (int i = 0; i < data_length; i++)
-            {
-                printf("%c",data[i]);
-                
-            }
-            printf ("\n");
-            free(data);
+            test_entrada();
         }
+
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
