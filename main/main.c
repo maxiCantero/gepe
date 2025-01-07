@@ -18,6 +18,19 @@
 #define TASK_MEMORY 1024 * 3
 #define NUM_INPUTS 5
 
+typedef struct
+{
+    int pin;
+    const char *valor_esperado;
+} entrada_t;
+
+entrada_t entradas[] =
+    {
+        {entrada0, "IN0 OK"},
+        {entrada1, "IN1 OK"},
+
+};
+
 static const char *tag = "UART";
 static uint8_t ultimo_valor[BUF_SIZE];
 
@@ -34,10 +47,10 @@ static void uart_task(void *pvParameters)
         }
         if (len > 0)
         {
-            memcpy(ultimo_valor, data, len);
+            memcpy(ultimo_valor, data, 6);
         }
 
-        printf("Dato: %s", data);
+        // printf("Dato: %s", data);
         uart_write_bytes(UART_NUM, (const char *)data, len);
         ESP_LOGI(tag, "Data received: %s", data);
     }
@@ -93,14 +106,27 @@ void enviar_mensaje(const char *mensaje)
 {
     uart_write_bytes(UART_NUM, mensaje, strlen(mensaje));
 }
-void test_entrada()
+void test_entrada(entrada_t entrada)
 {
-    gpio_set_level(entrada0, 0);
-    
-    if (strcmp((char*)ultimo_valor, "IN0 OK") == 0)
+    gpio_set_level(entrada.pin, 0);
+    vTaskDelay(1500 / portTICK_PERIOD_MS);
+    ESP_LOGW(tag,"valor %s",ultimo_valor);
+    if (strcmp((char *)ultimo_valor, entrada.valor_esperado) == 0)
     {
-        ESP_LOGI(tag,"Valor correcto");
-        gpio_set_level(entrada0,1);
+        ESP_LOGI(tag, "Valor correcto para entrada %d", entrada.pin);
+        gpio_set_level(entrada.pin, 1);
+    }
+    else
+    {
+        ESP_LOGE(tag, "Valor incorrecto para la entrada %d,", entrada.pin);
+        gpio_set_level(entrada.pin, 1);
+    }
+}
+void test_todas_entradas()
+{
+    for (int i = 0; i < sizeof(entradas) / sizeof(entradas[0]); i++)
+    {
+        test_entrada(entradas[i]);
     }
 }
 
@@ -119,7 +145,8 @@ void app_main(void)
         ESP_LOGI(tag, "Estado de boton: %d\n", estado_boton);
         if (estado_boton == 0)
         {
-            test_entrada();
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            test_todas_entradas();
         }
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
