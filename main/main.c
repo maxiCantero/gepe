@@ -11,8 +11,12 @@
 #define entrada2 27
 #define entrada3 26
 #define entrada4 25
-#define entrada5 33
-#define ignicion 32
+
+#define ignicion 13
+#define salida0 25
+#define salida1 33
+#define salida2 32
+#define salida3 35
 #define UART_NUM UART_NUM_2
 #define BUF_SIZE 1024
 #define TASK_MEMORY 1024 * 3
@@ -24,6 +28,12 @@ typedef struct
     const char *valor_esperado;
 } entrada_t;
 
+typedef struct 
+{
+    int pin;
+    const char *valor_esperado;
+} salida_t;
+
 entrada_t entradas[] =
     {
         {entrada0, "IN0 OK"},
@@ -33,6 +43,13 @@ entrada_t entradas[] =
 
 };
 
+salida_t salidas[] =
+{
+    {salida0, "OUT0 OK"},
+    {salida1, "OUT1 OK"},
+    {salida2, "OUT2 OK"},
+    {salida3, "OUT3 OK"},
+}
 static const char *tag = "UART";
 static uint8_t ultimo_valor[BUF_SIZE];
 
