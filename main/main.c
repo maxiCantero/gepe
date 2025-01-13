@@ -28,6 +28,8 @@ entrada_t entradas[] =
     {
         {entrada0, "IN0 OK"},
         {entrada1, "IN1 OK"},
+        {entrada2, "IN2 OK"},
+        {entrada3, "IN3 OK"},
 
 };
 
@@ -109,7 +111,7 @@ void enviar_mensaje(const char *mensaje)
 void test_entrada(entrada_t entrada)
 {
     gpio_set_level(entrada.pin, 0);
-    vTaskDelay(1500 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     ESP_LOGW(tag,"valor %s",ultimo_valor);
     if (strcmp((char *)ultimo_valor, entrada.valor_esperado) == 0)
     {
